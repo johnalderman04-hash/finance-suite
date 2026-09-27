@@ -33,7 +33,7 @@ function dGet(sym){
 function dBadge(){
   var r=dRaw();
   if(!r) return '';
-  return Fresh.badge('DAILY','Refreshed when the file is rebuilt')+' '+Fresh.badge('DELAYED','Options: CBOE delayed chains')+' '
+  return Fresh.badge('WEEKDAYS','Rebuilt each weekday morning (Mon–Fri)')+' '+Fresh.badge('DELAYED','Options: CBOE delayed chains')+' '
     +'<span class="asof">Discovery data as of '+Util.esc(r.asof)+' · Sources: Nasdaq, Yahoo Finance, CBOE (delayed) · refreshes when the file is rebuilt</span>';
 }
 var AR_TXT=['Sell','Underperform','Hold','Buy','Strong Buy'];
@@ -446,8 +446,41 @@ function dGexSVG(sym, o){
   var W=760,H=300;
   var vals=gs.map(function(g){ return g*1000; }); // collector stores $B per 1% move → $M per 1% move
   var mx=Math.max.apply(null, vals.map(function(v){return Math.abs(v);}).concat([0.01]));
-  var L=56,R=14,T=26,B=40;
+  var L=56,R=14,B=40;
   var X=function(i){ return L+i*(W-L-R)/Math.max(n-1,1); };
+  /* Collect level marks first, then stagger their labels into lanes so that
+     clustered levels (e.g. spot/call wall/put wall/max pain within a few
+     strikes of each other) never print on top of one another. */
+  var marks=[];
+  function mark(k, color, label){
+    var i=0,best=1e18;
+    for(var j=0;j<n;j++){ var d=Math.abs(ks[j]-k); if(d<best){best=d;i=j;} }
+    var x=X(i);
+    marks.push({x:x, lx:Math.max(64,Math.min(W-64,x)), color:color, label:label, lane:0});
+  }
+  mark(S,'#e6edf3','Spot $'+S.toFixed(0));
+  if(o.flip!=null) mark(o.flip,'#f0b429','Flip $'+o.flip.toFixed(0));
+  if(o.callwall) mark(o.callwall,'#3fb950','Call wall $'+o.callwall.toFixed(0));
+  if(o.putwall) mark(o.putwall,'#f85149','Put wall $'+o.putwall.toFixed(0));
+  if(o.maxpain!=null) mark(o.maxpain,'#58a6ff','Max pain $'+o.maxpain.toFixed(0));
+  var GAP=100, LANE_H=15;
+  marks.sort(function(a,b){ return a.lx-b.lx; });
+  var placed=[];
+  marks.forEach(function(m){
+    var lane=0;
+    for(;;){
+      var clash=false;
+      for(var p=0;p<placed.length;p++){
+        if(placed[p].lane===lane && Math.abs(placed[p].lx-m.lx)<GAP){ clash=true; break; }
+      }
+      if(!clash) break;
+      lane++;
+    }
+    m.lane=lane; placed.push(m);
+  });
+  var maxLane=0;
+  marks.forEach(function(m){ if(m.lane>maxLane) maxLane=m.lane; });
+  var T=30+maxLane*LANE_H+12;
   var Y=function(v){ return T+(1-(v+mx)/(2*mx))*(H-T-B); };
   var h='<svg viewBox="0 0 '+W+' '+H+'" class="chart">';
   h+='<line x1="'+L+'" y1="'+Y(0)+'" x2="'+(W-R)+'" y2="'+Y(0)+'" stroke="#30363d"/>';
@@ -456,18 +489,10 @@ function dGexSVG(sym, o){
     var x=X(i)-bw/2, y1=Y(Math.max(vals[i],0)), y2=Y(Math.min(vals[i],0));
     h+='<rect x="'+x.toFixed(1)+'" y="'+Math.min(y1,y2).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(Math.abs(y2-y1),1.5).toFixed(1)+'" fill="'+(vals[i]>=0?'#3fb950':'#f85149')+'" opacity="0.8"/>';
   }
-  function vline(k, color, label){
-    var i=0,best=1e18;
-    for(var j=0;j<n;j++){ var d=Math.abs(ks[j]-k); if(d<best){best=d;i=j;} }
-    var x=X(i);
-    h+='<line x1="'+x+'" y1="'+T+'" x2="'+x+'" y2="'+(H-B)+'" stroke="'+color+'" stroke-dasharray="5,4" stroke-width="1.5"/>';
-    h+='<text x="'+x+'" y="'+(T-8)+'" text-anchor="middle" class="chart-lab" fill="'+color+'">'+label+'</text>';
-  }
-  vline(S,'#e6edf3','Spot $'+S.toFixed(0));
-  if(o.flip!=null) vline(o.flip,'#f0b429','Flip $'+o.flip.toFixed(0));
-  if(o.callwall) vline(o.callwall,'#3fb950','Call wall $'+o.callwall.toFixed(0));
-  if(o.putwall) vline(o.putwall,'#f85149','Put wall $'+o.putwall.toFixed(0));
-  if(o.maxpain!=null) vline(o.maxpain,'#58a6ff','Max pain $'+o.maxpain.toFixed(0));
+  marks.forEach(function(m){
+    h+='<line x1="'+m.x+'" y1="'+T+'" x2="'+m.x+'" y2="'+(H-B)+'" stroke="'+m.color+'" stroke-dasharray="5,4" stroke-width="1.5"/>';
+    h+='<text x="'+m.lx+'" y="'+(30+m.lane*LANE_H)+'" text-anchor="middle" class="chart-lab" fill="'+m.color+'">'+m.label+'</text>';
+  });
   var step=Math.max(1,Math.ceil(n/14));
   for(var q=0;q<n;q+=step){
     h+='<text x="'+X(q).toFixed(1)+'" y="'+(H-B+16).toFixed(1)+'" text-anchor="middle" class="chart-lab" fill="#8b949e">$'+ks[q].toFixed(0)+'</text>';

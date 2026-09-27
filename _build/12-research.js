@@ -120,7 +120,7 @@ function rmHTML(sym){
   var h='<div class="panel"><h2><span class="ico">'+icon('microscope')+'</span> Research Mode — '+Util.esc(sym)+'</h2>';
   if(!F) return h+emptyState('No company data for '+sym+'.','Neither the discovery bundle nor the fundamentals bundle covers this ticker.')+'</div>';
   var asof=r?r.asof:null;
-  h+='<p>'+Fresh.badge('DAILY','Scanner/seasonality snapshot')+' '+Fresh.badge('HISTORICAL','SEC fundamentals bundle')+' '
+  h+='<p>'+Fresh.badge('WEEKDAYS','Scanner/seasonality snapshot')+' '+Fresh.badge('HISTORICAL','SEC fundamentals bundle')+' '
     +'<span class="small hint">'+Util.esc(F.name)+' · snapshot '+(asof?Util.esc(asof):'2026-09-25')+'</span></p>'
     +'<p><a class="btn sm ghost" href="#/deepdive/'+Util.esc(sym)+'">Deep Dive</a> '
     +'<a class="btn sm ghost" href="#/scanner/'+Util.esc(sym)+'">Scanner</a> '

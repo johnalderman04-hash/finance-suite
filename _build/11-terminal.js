@@ -11,7 +11,7 @@ const FRESH_META={
   'LIVE':      {cls:'f-live',  desc:'Streaming/real-time from the provider'},
   'NEAR-LIVE': {cls:'f-near',  desc:'Polled within the last few minutes'},
   'DELAYED':   {cls:'f-delay', desc:'Provider-delayed data (e.g. 15-min)'},
-  'DAILY':     {cls:'f-daily', desc:'Refreshed once per day on rebuild'},
+  'WEEKDAYS':  {cls:'f-daily', desc:'Rebuilt each weekday morning (Mon–Fri)'},
   'HISTORICAL':{cls:'f-hist',  desc:'Bundled historical snapshot'},
   'UNAVAILABLE':{cls:'f-na',   desc:'Could not be retrieved'}
 };
@@ -146,7 +146,7 @@ const SrcPanel={
     var dr=(typeof dRaw!=='undefined')?dRaw():null;
     rows.push(['Scanner / seasonality / analyst',
       dr?('Nasdaq + Yahoo Finance, bundled '+dr.asof):'Not bundled in this file',
-      dr?'DAILY':'UNAVAILABLE', dr?'Nasdaq screener, analyst & summary endpoints; Yahoo monthly bars':'rebuild to include']);
+      dr?'WEEKDAYS':'UNAVAILABLE', dr?'Nasdaq screener, analyst & summary endpoints; Yahoo monthly bars':'rebuild to include']);
     rows.push(['Options / GEX',
       dr&&dr.opt?('CBOE delayed chains, bundled '+dr.asof):'Not bundled in this file',
       dr&&dr.opt?'DELAYED':'UNAVAILABLE', dr&&dr.opt?'delayed ~15 min at capture; 3 nearest expirations':'rebuild to include']);
@@ -506,7 +506,7 @@ document.addEventListener('keydown', function(e){
 })();
 
 /* ---------------- CORE DATA freshness chip ----------------
-   Shows when the bundled (DAILY, not live) dataset was rebuilt.
+   Shows when the bundled (WEEKDAYS, not live) dataset was rebuilt.
    Reads window.__DISCOVERY__.meta written by the daily collector. */
 var CoreFresh={
   render:function(){
@@ -520,7 +520,7 @@ var CoreFresh={
     var label='CORE DATA · '+m.asof+(stale?' · options '+optSt:'');
     el.innerHTML='<span class="dot"></span>'+label;
     el.className='corefresh'+(stale?' stale':'');
-    el.title='Bundled market data (DAILY — not live). Rebuilt '+(m.collectedAt||m.asof)+
+    el.title='Bundled market data (WEEKDAYS — not live). Rebuilt '+(m.collectedAt||m.asof)+
       '. Stocks: '+stkSt+' ('+((ds.stocks||{}).recordCount||'?')+'), options: '+optSt+
       ' ('+((ds.options||{}).recordCount||'?')+'). Live layers (news, quotes) update on their own.';
   },
