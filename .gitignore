@@ -1,0 +1,4 @@
+# local-only junk, never commit
+_build/.cache-discovery/
+_build/__pycache__/
+_build/*.log
